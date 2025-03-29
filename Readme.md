@@ -35,7 +35,7 @@ pip install -r requirements.txt
 
 ### 4️⃣ **Run the FastAPI Server**
 ```bash
-uvicorn main:app --reload
+uvicorn app:app --reload
 ```
 The API will now be available at: `http://localhost:8000`
 
