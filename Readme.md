@@ -12,7 +12,7 @@ AquaSentinel is an AI-driven platform that predicts water quality for different 
 
 ## 📌 Features
 - Predicts **monthly** and **yearly** Water Quality Index (WQI).
-- Supports **multiple water sources** (filterable by `source_id`).
+- Supports **multiple water sources within Mumbai** (filterable by `source_id`).
 - Uses **Facebook Prophet** for accurate time-series forecasting.
 - **FastAPI-based REST API** for seamless integration with web applications.
 
@@ -38,21 +38,7 @@ venv\Scripts\activate  # For Windows
 pip install -r requirements.txt
 ```
 
-### 4️⃣ **Prepare the Dataset**
-Ensure your `data.csv` file contains the following columns:
-```csv
-source_id, year, month, WQI
-1, 2023, 1, 72.5
-1, 2023, 2, 73.1
-2, 2023, 1, 65.4
-```
-
-### 5️⃣ **Train the Prophet Model**
-```bash
-python train_model.py  # This script trains and saves the model
-```
-
-### 6️⃣ **Run the FastAPI Server**
+### 4️⃣ **Run the FastAPI Server**
 ```bash
 uvicorn main:app --reload
 ```
