@@ -4,6 +4,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from fastapi.middleware.cors import CORSMiddleware
+
 import httpx
 
 import requests
@@ -12,10 +14,19 @@ API_KEY = "kuAdNGEAFwDYsLzgQBYH0rF8skQGDlnX2FYTGcTAgfWV"
 IAM_URL = "https://iam.cloud.ibm.com/identity/token"
 
 # Load the trained WQI model
-model = joblib.load("water_quality_model.pkl")
+water_model = joblib.load("water_quality_model.pkl")
 
 # Initialize FastAPI app
 app = FastAPI(title="AquaSentinel API", description="Predicts Water Quality Index (WQI) and classifies pollution levels")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 # Define input schema using Pydantic
 class WaterQualityInput(BaseModel):
@@ -103,15 +114,32 @@ async def get_watsonx_insight(predicted_wqi, source_id, data):
 async def predict_wqi(data: WaterQualityInput):
     try:
         # Convert input data to NumPy array (Ensuring source_id is first)
-        input_data = np.array([[data.source_id, data.year, data.month, data.pH, data.DO, data.BOD, data.COD, data.Nitrate, data.FC]])
+        input_data = np.array([[
+    int(data.source_id or 1317),
+    int(data.year or 0),
+    int(data.month or 0),
+    float(data.pH or 0.0),
+    float(data.DO or 0.0),
+    float(data.BOD or 0.0),
+    float(data.COD or 0.0),
+    float(data.Nitrate or 0.0),
+    float(data.FC or 0.0)
+]])
+
+        input_df = pd.DataFrame(input_data, columns=["id", "year", "month", "ph", "do", "bod", "cod", "nitrate", "fc"])
 
         # Make prediction
-        predicted_wqi = model.predict(input_data)[0]
+        predicted_wqi = water_model.predict(input_df)[0]
+        print(predict_wqi)
         pollution_label = classify_wqi(predicted_wqi)
 
         # Generate AI insight using Watsonx.ai
         ai_insight = await get_watsonx_insight(predicted_wqi, data.source_id, data)
-
+        print({
+            "Predicted WQI": round(predicted_wqi, 2),
+            "Pollution Level": pollution_label,
+            "AI Insight": ai_insight
+        })
         return {
             "Predicted WQI": round(predicted_wqi, 2),
             "Pollution Level": pollution_label,
@@ -125,7 +153,7 @@ async def predict_wqi(data: WaterQualityInput):
 def load_model():
     return joblib.load("prophet_wqi_model.pkl")
 
-model = load_model()
+forecast_model = load_model()
 
 # Function to generate future predictions
 def generate_forecast(periods, freq):
@@ -134,11 +162,11 @@ def generate_forecast(periods, freq):
     future_dates = pd.date_range(start=current_date, periods=periods, freq=freq)
     future_df = pd.DataFrame({'ds': future_dates})
 
-    forecast = model.predict(future_df)
+    forecast = forecast_model.predict(future_df)
     return forecast[['ds', 'yhat']]
 
 # **API Endpoint for Forecasting**
-@app.get("/predict")
+@app.get("/forecast")
 async def predict_future():
     """Returns monthly and yearly WQI predictions in a JSON format for frontend visualization."""
 
